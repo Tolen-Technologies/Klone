@@ -1,0 +1,37 @@
+services:
+  crm-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crm-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      # Database Configuration
+      CRM_DB_HOST: ${CRM_DB_HOST:-host.docker.internal}
+      CRM_DB_PORT: ${CRM_DB_PORT:-3306}
+      CRM_DB_USER: ${CRM_DB_USER}
+      CRM_DB_PASSWORD: ${CRM_DB_PASSWORD}
+      CRM_DB_DATABASE: ${CRM_DB_DATABASE:-clonecrm}
+      CRM_DB_TABLES: ${CRM_DB_TABLES:-branch,customer,lead,invoice,product,productdtl,city,customertype,customertypedtl}
+      # OpenAI Configuration
+      CRM_OPENAI_API_KEY: ${CRM_OPENAI_API_KEY:-${OPENAI_API_KEY}}
+      CRM_OPENAI_MODEL: ${CRM_OPENAI_MODEL:-gpt-4o-mini}
+      # Server Configuration
+      CRM_DEBUG: ${CRM_DEBUG:-false}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - default
+
+networks:
+  default:
+    name: librechat_default
+    external: true
