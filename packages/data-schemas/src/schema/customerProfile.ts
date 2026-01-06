@@ -1,5 +1,10 @@
 import { Schema } from 'mongoose';
-import type { ICustomerProfile, CustomerPersonality } from '~/types';
+import type {
+  ICustomerProfile,
+  CustomerPersonality,
+  CustomerTranscript,
+  BookmarkedFact,
+} from '~/types';
 
 const customerPersonalitySchema = new Schema<CustomerPersonality>(
   {
@@ -13,6 +18,49 @@ const customerPersonalitySchema = new Schema<CustomerPersonality>(
     },
     generatedAt: {
       type: Date,
+    },
+  },
+  { _id: false },
+);
+
+const customerTranscriptSchema = new Schema<CustomerTranscript>(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+    filename: {
+      type: String,
+      required: true,
+    },
+    content: {
+      type: String,
+      required: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false },
+);
+
+const bookmarkedFactSchema = new Schema<BookmarkedFact>(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+    text: {
+      type: String,
+      required: true,
+    },
+    transcriptId: {
+      type: String,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { _id: false },
@@ -35,6 +83,14 @@ const customerProfileSchema = new Schema<ICustomerProfile>(
     notes: {
       type: String,
       default: '',
+    },
+    transcripts: {
+      type: [customerTranscriptSchema],
+      default: [],
+    },
+    bookmarkedFacts: {
+      type: [bookmarkedFactSchema],
+      default: [],
     },
     conversationId: {
       type: String,

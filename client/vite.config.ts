@@ -10,15 +10,15 @@ import { VitePWA } from 'vite-plugin-pwa';
 // https://vitejs.dev/config/
 const backendPort = (process.env.BACKEND_PORT && Number(process.env.BACKEND_PORT)) || 3080;
 const backendHost = process.env.BACKEND_HOST || 'localhost';
-const backendURL =
-  process.env.BACKEND_URL || `http://${backendHost}:${backendPort}`;
+const backendURL = process.env.BACKEND_URL || `http://${backendHost}:${backendPort}`;
 
 export default defineConfig(({ command }) => ({
   base: '',
   server: {
-    allowedHosts: process.env.VITE_ALLOWED_HOSTS && process.env.VITE_ALLOWED_HOSTS.split(',') || [],
+    allowedHosts:
+      (process.env.VITE_ALLOWED_HOSTS && process.env.VITE_ALLOWED_HOSTS.split(',')) || [],
     host: process.env.HOST || 'localhost',
-    port: process.env.PORT && Number(process.env.PORT) || 3090,
+    port: (process.env.PORT && Number(process.env.PORT)) || 3090,
     strictPort: false,
     proxy: {
       '/api': {

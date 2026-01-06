@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { Globe, Settings, Settings2, TerminalSquareIcon } from 'lucide-react';
+import { Globe, Settings, Settings2, TerminalSquareIcon, Users } from 'lucide-react';
 import { TooltipAnchor, DropdownPopup, PinIcon, VectorIcon } from '@librechat/client';
 import type { MenuItemProps } from '~/common';
 import {
@@ -29,6 +29,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     webSearch,
     artifacts,
     fileSearch,
+    crmSegment,
     agentsConfig,
     mcpServerManager,
     codeApiKeyForm,
@@ -56,6 +57,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   } = codeInterpreter;
   const { isPinned: isFileSearchPinned, setIsPinned: setIsFileSearchPinned } = fileSearch;
   const { isPinned: isArtifactsPinned, setIsPinned: setIsArtifactsPinned } = artifacts;
+  const { isPinned: isCrmSegmentPinned, setIsPinned: setIsCrmSegmentPinned } = crmSegment;
 
   const canUseWebSearch = useHasAccess({
     permissionType: PermissionTypes.WEB_SEARCH,
@@ -102,6 +104,11 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     const newValue = !fileSearch.toggleState;
     fileSearch.debouncedChange({ value: newValue });
   }, [fileSearch]);
+
+  const handleCrmSegmentToggle = useCallback(() => {
+    const newValue = !crmSegment.toggleState;
+    crmSegment.debouncedChange({ value: newValue });
+  }, [crmSegment]);
 
   const handleArtifactsToggle = useCallback(() => {
     const currentState = artifacts.toggleState;
@@ -298,6 +305,37 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
       render: (props) => <MCPSubMenu {...props} placeholder={mcpPlaceholder} />,
     });
   }
+
+  // CRM Segment tool - always available
+  dropdownItems.push({
+    onClick: handleCrmSegmentToggle,
+    hideOnClick: false,
+    render: (props) => (
+      <div {...props}>
+        <div className="flex items-center gap-2">
+          <Users className="icon-md" aria-hidden="true" />
+          <span>Create Segment</span>
+        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsCrmSegmentPinned(!isCrmSegmentPinned);
+          }}
+          className={cn(
+            'rounded p-1 transition-all duration-200',
+            'hover:bg-surface-secondary hover:shadow-sm',
+            !isCrmSegmentPinned && 'text-text-secondary hover:text-text-primary',
+          )}
+          aria-label={isCrmSegmentPinned ? 'Unpin' : 'Pin'}
+        >
+          <div className="h-4 w-4">
+            <PinIcon unpin={isCrmSegmentPinned} />
+          </div>
+        </button>
+      </div>
+    ),
+  });
 
   if (dropdownItems.length === 0) {
     return null;

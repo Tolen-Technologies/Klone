@@ -1638,6 +1638,70 @@ html {
   }
 }
 
+/* Shimmer/shine animation for thinking text */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.thinking-shimmer {
+  background: linear-gradient(
+    90deg,
+    currentColor 0%,
+    currentColor 40%,
+    #ffffff 50%,
+    currentColor 60%,
+    currentColor 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Command highlight with shimmer for valid commands */
+@keyframes command-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.command-highlight-valid {
+  background: linear-gradient(
+    90deg,
+    #10b981 0%,
+    #10b981 35%,
+    #6ee7b7 50%,
+    #10b981 65%,
+    #10b981 100%
+  );
+  background-size: 200% auto;
+  color: white;
+  animation: command-shimmer 1.5s ease-in-out infinite;
+}
+
+.dark .command-highlight-valid {
+  background: linear-gradient(
+    90deg,
+    #059669 0%,
+    #059669 35%,
+    #34d399 50%,
+    #059669 65%,
+    #059669 100%
+  );
+  background-size: 200% auto;
+  color: white;
+  animation: command-shimmer 1.5s ease-in-out infinite;
+}
+
 .truncate {
   overflow: hidden;
   white-space: nowrap;

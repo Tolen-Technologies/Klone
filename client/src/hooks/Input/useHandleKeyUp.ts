@@ -3,6 +3,7 @@ import { useSetRecoilState, useRecoilValue } from 'recoil';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { SetterOrUpdater } from 'recoil';
 import useHasAccess from '~/hooks/Roles/useHasAccess';
+import { VALID_COMMAND_NAMES } from '~/hooks/Commands';
 import store from '~/store';
 
 /** Event Keys that shouldn't trigger a command */
@@ -10,6 +11,20 @@ const invalidKeys = {
   Escape: true,
   Backspace: true,
   Enter: true,
+};
+
+/**
+ * Check if text starts with a custom command (like /segment)
+ */
+const isCustomCommand = (text: string): boolean => {
+  if (!text.startsWith('/')) {
+    return false;
+  }
+  const commandText = text.slice(1).toLowerCase(); // Remove leading /
+  // Check if any custom command matches or is a prefix of what's being typed
+  return VALID_COMMAND_NAMES.some(
+    (cmd) => commandText.startsWith(cmd) || cmd.startsWith(commandText),
+  );
 };
 
 /**
@@ -21,6 +36,11 @@ const shouldTriggerCommand = (
 ) => {
   const text = textAreaRef.current?.value;
   if (typeof text !== 'string' || text.length === 0 || text[0] !== commandChar) {
+    return false;
+  }
+
+  // Don't trigger prompts popover for custom commands like /segment
+  if (commandChar === '/' && isCustomCommand(text)) {
     return false;
   }
 

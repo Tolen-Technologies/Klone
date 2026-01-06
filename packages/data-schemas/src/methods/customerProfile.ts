@@ -173,12 +173,175 @@ export function createCustomerProfileMethods(mongoose: typeof import('mongoose')
     }
   }
 
+  /**
+   * Adds a transcript to a customer profile
+   */
+  async function addTranscript({
+    mysqlCustomerId,
+    userId,
+    filename,
+    content,
+  }: t.AddTranscriptParams): Promise<t.CustomerTranscript> {
+    try {
+      const CustomerProfile = mongoose.models.CustomerProfile;
+      const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+
+      const transcript: t.CustomerTranscript = {
+        id: new Types.ObjectId().toString(),
+        filename,
+        content,
+        createdAt: new Date(),
+      };
+
+      await CustomerProfile.findOneAndUpdate(
+        { mysqlCustomerId, user: userObjectId },
+        {
+          $push: { transcripts: transcript },
+          $setOnInsert: {
+            mysqlCustomerId,
+            user: userObjectId,
+          },
+        },
+        { upsert: true },
+      );
+
+      return transcript;
+    } catch (error) {
+      logger.error('Failed to add transcript:', error);
+      throw new Error(
+        `Failed to add transcript: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Gets all transcripts for a customer profile
+   */
+  async function getTranscripts({
+    mysqlCustomerId,
+    userId,
+  }: t.GetCustomerProfileParams): Promise<t.CustomerTranscript[]> {
+    try {
+      const CustomerProfile = mongoose.models.CustomerProfile;
+      const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+
+      const profile = await CustomerProfile.findOne({
+        mysqlCustomerId,
+        user: userObjectId,
+      }).lean();
+
+      return (profile as t.ICustomerProfileLean | null)?.transcripts || [];
+    } catch (error) {
+      logger.error('Failed to get transcripts:', error);
+      throw new Error(
+        `Failed to get transcripts: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Adds a bookmarked fact to a customer profile
+   */
+  async function addBookmarkedFact({
+    mysqlCustomerId,
+    userId,
+    text,
+    transcriptId,
+  }: t.AddBookmarkedFactParams): Promise<t.BookmarkedFact> {
+    try {
+      const CustomerProfile = mongoose.models.CustomerProfile;
+      const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+
+      const fact: t.BookmarkedFact = {
+        id: new Types.ObjectId().toString(),
+        text,
+        transcriptId,
+        createdAt: new Date(),
+      };
+
+      await CustomerProfile.findOneAndUpdate(
+        { mysqlCustomerId, user: userObjectId },
+        {
+          $push: { bookmarkedFacts: fact },
+          $setOnInsert: {
+            mysqlCustomerId,
+            user: userObjectId,
+          },
+        },
+        { upsert: true },
+      );
+
+      return fact;
+    } catch (error) {
+      logger.error('Failed to add bookmarked fact:', error);
+      throw new Error(
+        `Failed to add bookmarked fact: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Gets all bookmarked facts for a customer profile
+   */
+  async function getBookmarkedFacts({
+    mysqlCustomerId,
+    userId,
+  }: t.GetCustomerProfileParams): Promise<t.BookmarkedFact[]> {
+    try {
+      const CustomerProfile = mongoose.models.CustomerProfile;
+      const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+
+      const profile = await CustomerProfile.findOne({
+        mysqlCustomerId,
+        user: userObjectId,
+      }).lean();
+
+      return (profile as t.ICustomerProfileLean | null)?.bookmarkedFacts || [];
+    } catch (error) {
+      logger.error('Failed to get bookmarked facts:', error);
+      throw new Error(
+        `Failed to get bookmarked facts: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Removes a bookmarked fact from a customer profile
+   */
+  async function removeBookmarkedFact({
+    mysqlCustomerId,
+    userId,
+    factId,
+  }: t.RemoveBookmarkedFactParams): Promise<boolean> {
+    try {
+      const CustomerProfile = mongoose.models.CustomerProfile;
+      const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+
+      const result = await CustomerProfile.findOneAndUpdate(
+        { mysqlCustomerId, user: userObjectId },
+        { $pull: { bookmarkedFacts: { id: factId } } },
+      );
+
+      return !!result;
+    } catch (error) {
+      logger.error('Failed to remove bookmarked fact:', error);
+      throw new Error(
+        `Failed to remove bookmarked fact: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
   return {
     getCustomerProfileByCustomerId,
     upsertCustomerProfile,
     updateCustomerNotes,
     updateCustomerPersonality,
     deleteCustomerProfile,
+    addTranscript,
+    getTranscripts,
+    addBookmarkedFact,
+    getBookmarkedFacts,
+    removeBookmarkedFact,
   };
 }
 

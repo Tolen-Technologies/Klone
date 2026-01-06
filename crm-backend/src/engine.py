@@ -585,18 +585,18 @@ class CRMQueryEngine:
         logger.info(f"Processing streaming contextual chat with {len(messages)} messages")
 
         try:
-            from openai import OpenAI as OpenAIClient
+            from openai import AsyncOpenAI
 
-            client = OpenAIClient(api_key=self.settings.openai_api_key)
+            client = AsyncOpenAI(api_key=self.settings.openai_api_key)
 
-            stream = client.chat.completions.create(
+            stream = await client.chat.completions.create(
                 model=self.settings.openai_model,
                 messages=messages,
                 temperature=0.7,
                 stream=True,
             )
 
-            for chunk in stream:
+            async for chunk in stream:
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
 

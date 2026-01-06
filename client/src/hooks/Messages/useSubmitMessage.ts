@@ -2,14 +2,12 @@ import { v4 } from 'uuid';
 import { useCallback } from 'react';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
 import { Constants, replaceSpecialVars } from 'librechat-data-provider';
-import type { TMessage } from 'librechat-data-provider';
 import { useChatContext, useChatFormContext, useAddedChatContext } from '~/Providers';
+import { CRM_SEGMENT_TOOL_KEY } from '~/Providers/BadgeRowContext';
 import { useAuthContext } from '~/hooks/AuthContext';
-import { createSegment } from '~/data-provider/Segments';
+import { matchCommand, createSegmentFromDescription } from '~/hooks/Commands';
 import store from '~/store';
-
-// Constants for segment command
-const NO_PARENT = '00000000-0000-0000-0000-000000000000';
+import { ephemeralAgentByConvoId } from '~/store';
 
 const appendIndex = (index: number, value?: string) => {
   if (!value) {
@@ -28,83 +26,38 @@ export default function useSubmitMessage() {
   const activeConvos = useRecoilValue(store.allConversationsSelector);
   const setActivePrompt = useSetRecoilState(store.activePromptByIndex(index));
 
+  // Check if CRM Segment tool is enabled
+  const convoKey = conversation?.conversationId ?? Constants.NEW_CONVO;
+  const ephemeralAgent = useRecoilValue(ephemeralAgentByConvoId(convoKey));
+  const isCrmSegmentEnabled = ephemeralAgent?.[CRM_SEGMENT_TOOL_KEY] === true;
+
   const submitMessage = useCallback(
     async (data?: { text: string }) => {
       if (!data) {
         return console.warn('No data provided to submitMessage');
       }
 
-      // Intercept /segment command
-      const segmentMatch = data.text.match(/^\/segment\s+(.+)$/i);
-      if (segmentMatch) {
-        const description = segmentMatch[1].trim();
-        const currentMessages = getMessages() || [];
-        const conversationId = conversation?.conversationId || v4();
-        const now = new Date().toISOString();
+      // Check if text matches any registered command
+      const commandMatch = matchCommand(data.text);
+      if (commandMatch) {
+        const { command, match } = commandMatch;
+        await command.handler(match, {
+          getMessages,
+          setMessages,
+          conversation,
+          resetForm: () => methods.reset(),
+        });
+        return; // Don't send to LLM
+      }
 
-        // Find the last message to use as parent
-        const lastMessage = currentMessages[currentMessages.length - 1];
-        const parentMessageId = lastMessage?.messageId || NO_PARENT;
-
-        // Create user message
-        const userMessageId = v4();
-        const userMessage: TMessage = {
-          messageId: userMessageId,
-          conversationId,
-          parentMessageId,
-          text: data.text,
-          sender: 'User',
-          isCreatedByUser: true,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        // Add user message to conversation
-        setMessages([...currentMessages, userMessage]);
-        methods.reset();
-
-        // Create assistant message (will be updated with result)
-        const assistantMessageId = v4();
-        let assistantMessage: TMessage = {
-          messageId: assistantMessageId,
-          conversationId,
-          parentMessageId: userMessageId,
-          text: 'Membuat segment...',
-          sender: 'CRM Assistant',
-          isCreatedByUser: false,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        // Add "loading" assistant message
-        setMessages([...currentMessages, userMessage, assistantMessage]);
-
-        try {
-          const segment = await createSegment({ description });
-
-          // Update assistant message with success response
-          const segmentUrl = `/segments?selected=${segment.segmentId}`;
-          assistantMessage = {
-            ...assistantMessage,
-            text: `Segment berhasil dibuat!\n\n**${segment.name}**\n\n${segment.description || ''}\n\n[Lihat Segment](${segmentUrl})`,
-            updatedAt: new Date().toISOString(),
-          };
-
-          setMessages([...currentMessages, userMessage, assistantMessage]);
-        } catch (error) {
-          console.error('[/segment] Error creating segment:', error);
-
-          // Update assistant message with error
-          assistantMessage = {
-            ...assistantMessage,
-            text: 'Gagal membuat segment. Silakan coba lagi.',
-            error: true,
-            updatedAt: new Date().toISOString(),
-          };
-
-          setMessages([...currentMessages, userMessage, assistantMessage]);
-        }
-
+      // Check if CRM Segment tool is enabled - treat input as segment description
+      if (isCrmSegmentEnabled && data.text.trim()) {
+        await createSegmentFromDescription(data.text.trim(), {
+          getMessages,
+          setMessages,
+          conversation,
+          resetForm: () => methods.reset(),
+        });
         return; // Don't send to LLM
       }
 
@@ -157,6 +110,7 @@ export default function useSubmitMessage() {
       askAdditional,
       latestMessage,
       conversation,
+      isCrmSegmentEnabled,
     ],
   );
 

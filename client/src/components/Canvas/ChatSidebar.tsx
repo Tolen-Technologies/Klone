@@ -128,6 +128,18 @@ function buildSystemMessage(
   parts.push(
     'Jika ditanya tentang data yang tidak tersedia, sampaikan dengan sopan bahwa informasi tersebut tidak ada dalam catatan.',
   );
+  parts.push('');
+  parts.push('### Aturan Jawaban');
+  parts.push(
+    '- Fokus hanya pada topik perjalanan/travel. Jangan menjawab pertanyaan di luar topik tersebut.',
+  );
+  parts.push(
+    '- Jika pertanyaan di luar travel, memerlukan informasi terbaru dari luar data, atau konteks tidak cukup: balas persis "Saya tidak bisa menjawab pertanyaan tersebut." tanpa tambahan lain.',
+  );
+  parts.push(
+    '- Jika bisa menjawab, gunakan hanya data yang diberikan. Sertakan satu kalimat sitasi tiruan, misalnya diawali "Berdasarkan inventory yang ada, ..." atau "Dari data transaksi yang ada, ...".',
+  );
+  parts.push('- Jangan mengarang fakta atau mengambil informasi di luar konteks yang disediakan.');
 
   return parts.join('\n');
 }
@@ -444,18 +456,17 @@ export default function ChatSidebar({
   // Render expanded state
   // -------------------------------------------------------------------------
   return (
-    <div className="flex h-full w-full flex-col border-l border-border-light bg-surface-secondary">
+    <div className="flex h-full w-full flex-col border-l border-border-light bg-white dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border-light px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-full bg-blue-500 text-sm font-medium text-white">
-            {customerData?.name?.charAt(0)?.toUpperCase() || 'C'}
-          </div>
+          <img
+            src="/assets/assisstant.png"
+            alt="Assistant"
+            className="size-8 rounded-full object-cover"
+          />
           <div>
-            <h3 className="text-sm font-medium text-text-primary">
-              {customerData?.name || 'Customer Chat'}
-            </h3>
-            <p className="text-xs text-text-tertiary">{messages.length} pesan</p>
+            <h3 className="text-sm font-medium text-text-primary">Agent Assistant</h3>
           </div>
         </div>
 
@@ -483,7 +494,7 @@ export default function ChatSidebar({
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="scrollbar-hover flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-surface-tertiary">
@@ -598,23 +609,15 @@ function MessageBubble({ message }: MessageBubbleProps) {
       <div
         className={cn(
           'max-w-[80%] rounded-2xl px-4 py-2',
-          isUser ? 'bg-blue-500 text-white' : 'bg-surface-tertiary text-text-primary',
+          isUser
+            ? 'bg-[#F0EFED] text-gray-900 dark:bg-gray-600 dark:text-gray-100'
+            : 'bg-transparent text-gray-900 dark:text-gray-100',
         )}
       >
         {isEmpty ? (
-          <div className="flex items-center gap-2">
-            <span className="inline-block size-2 animate-pulse rounded-full bg-current" />
-            <span
-              className="inline-block size-2 animate-pulse rounded-full bg-current"
-              style={{ animationDelay: '0.2s' }}
-            />
-            <span
-              className="inline-block size-2 animate-pulse rounded-full bg-current"
-              style={{ animationDelay: '0.4s' }}
-            />
-          </div>
+          <span className="thinking-shimmer text-sm font-medium">Thinking...</span>
         ) : (
-          <div className="prose prose-sm max-w-none text-sm leading-relaxed">
+          <div className="prose prose-sm max-w-none text-sm leading-relaxed text-gray-900 dark:text-gray-100">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
           </div>
         )}

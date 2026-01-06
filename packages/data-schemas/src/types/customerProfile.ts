@@ -10,12 +10,34 @@ export interface CustomerPersonality {
 }
 
 /**
+ * Represents a recorded interaction transcript.
+ */
+export interface CustomerTranscript {
+  id: string;
+  filename: string;
+  content: string;
+  createdAt: Date;
+}
+
+/**
+ * Represents a bookmarked fact extracted from a transcript.
+ */
+export interface BookmarkedFact {
+  id: string;
+  text: string;
+  transcriptId?: string;
+  createdAt: Date;
+}
+
+/**
  * Represents a customer profile linked to a MySQL customer record.
  */
 export interface CustomerProfile {
   mysqlCustomerId: number;
   personality: CustomerPersonality;
   notes: string;
+  transcripts: CustomerTranscript[];
+  bookmarkedFacts: BookmarkedFact[];
   conversationId?: string;
   user: Types.ObjectId;
   createdAt: Date;
@@ -30,6 +52,8 @@ export interface ICustomerProfile extends Document {
   mysqlCustomerId: number;
   personality: CustomerPersonality;
   notes: string;
+  transcripts: CustomerTranscript[];
+  bookmarkedFacts: BookmarkedFact[];
   conversationId?: string;
   user: Types.ObjectId;
   createdAt: Date;
@@ -44,6 +68,8 @@ export interface ICustomerProfileLean {
   mysqlCustomerId: number;
   personality: CustomerPersonality;
   notes: string;
+  transcripts: CustomerTranscript[];
+  bookmarkedFacts: BookmarkedFact[];
   conversationId?: string;
   user: Types.ObjectId;
   createdAt: Date;
@@ -85,4 +111,33 @@ export interface UpdateCustomerPersonalityParams {
 export interface GetCustomerProfileParams {
   mysqlCustomerId: number;
   userId: string | Types.ObjectId;
+}
+
+/**
+ * Parameters for adding a transcript.
+ */
+export interface AddTranscriptParams {
+  mysqlCustomerId: number;
+  userId: string | Types.ObjectId;
+  filename: string;
+  content: string;
+}
+
+/**
+ * Parameters for adding a bookmarked fact.
+ */
+export interface AddBookmarkedFactParams {
+  mysqlCustomerId: number;
+  userId: string | Types.ObjectId;
+  text: string;
+  transcriptId?: string;
+}
+
+/**
+ * Parameters for removing a bookmarked fact.
+ */
+export interface RemoveBookmarkedFactParams {
+  mysqlCustomerId: number;
+  userId: string | Types.ObjectId;
+  factId: string;
 }

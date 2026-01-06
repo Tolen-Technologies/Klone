@@ -175,7 +175,7 @@ export default function SegmentsView() {
 
           {/* Stats with Info Tooltip */}
           {selectedSegment && (
-            <div className="flex items-start gap-3 md:w-1/2 md:justify-end">
+            <div className="flex items-center gap-3 md:w-1/2 md:justify-end">
               <TooltipAnchor
                 description={`Description: ${selectedSegment.description || 'N/A'}\n\nOriginal Prompt: ${selectedSegment.originalPrompt || 'N/A'}`}
                 side="bottom"
@@ -196,13 +196,10 @@ export default function SegmentsView() {
                   </svg>
                 </div>
               </TooltipAnchor>
-              <div className="flex flex-col gap-1 text-right text-sm text-text-tertiary">
-                <div>
-                  <span className="font-medium">Last executed: </span>
-                  {selectedSegment.lastExecutedAt
-                    ? new Date(selectedSegment.lastExecutedAt).toLocaleString('id-ID')
-                    : 'Never'}
-                </div>
+              <div className="gap-1 text-right text-sm text-text-tertiary">
+                {selectedSegment.lastExecutedAt
+                  ? new Date(selectedSegment.lastExecutedAt).toLocaleString('id-ID')
+                  : 'Never'}
               </div>
             </div>
           )}

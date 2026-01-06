@@ -100,12 +100,12 @@ export default function PersonalitySection({
       const generatedPersonality = await crmResponse.json();
 
       // Step 2: Save the generated personality to LibreChat profile
-      let savedProfile = null;
+      let savedProfile: { personality?: CustomerPersonality } | null = null;
       try {
-        savedProfile = await request.put(`/api/customer-profile/${customerId}/personality`, {
+        savedProfile = (await request.put(`/api/customer-profile/${customerId}/personality`, {
           summary: generatedPersonality.summary,
           preferences: generatedPersonality.preferences,
-        });
+        })) as { personality?: CustomerPersonality } | null;
       } catch (saveError) {
         // If save fails, still show the generated personality but warn user
         console.error('Failed to save personality to profile:', saveError);
@@ -210,13 +210,13 @@ export default function PersonalitySection({
   if (status === 'generating') {
     return (
       <div className="space-y-4">
-        <h2 className="text-base font-medium text-text-primary">Relationship Understanding (Draft)</h2>
+        <h2 className="text-base font-medium text-text-primary">
+          Relationship Understanding (Draft)
+        </h2>
         <div className="flex flex-col items-center justify-center py-6">
           <Spinner className="size-6" />
           <p className="mt-3 text-sm text-text-secondary">Generating personality...</p>
-          <p className="mt-1 text-xs text-text-tertiary">
-            AI is analyzing customer data
-          </p>
+          <p className="mt-1 text-xs text-text-tertiary">AI is analyzing customer data</p>
         </div>
       </div>
     );
@@ -226,7 +226,9 @@ export default function PersonalitySection({
   if (status === 'error') {
     return (
       <div className="space-y-4">
-        <h2 className="text-base font-medium text-text-primary">Relationship Understanding (Draft)</h2>
+        <h2 className="text-base font-medium text-text-primary">
+          Relationship Understanding (Draft)
+        </h2>
         <div className="flex items-center gap-3 rounded-lg bg-red-50 px-4 py-3 dark:bg-red-900/20">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -262,7 +264,9 @@ export default function PersonalitySection({
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-medium text-text-primary">Relationship Understanding (Draft)</h2>
+          <h2 className="text-base font-medium text-text-primary">
+            Relationship Understanding (Draft)
+          </h2>
           <button
             onClick={handleRegenerateClick}
             className="flex items-center gap-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary"
@@ -337,7 +341,9 @@ export default function PersonalitySection({
   // Render empty state (waiting for data or no customer data)
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-medium text-text-primary">Relationship Understanding (Draft)</h2>
+      <h2 className="text-base font-medium text-text-primary">
+        Relationship Understanding (Draft)
+      </h2>
       <div className="flex items-center gap-3 py-2">
         {customerData ? (
           <>

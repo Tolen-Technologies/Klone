@@ -2,6 +2,7 @@ export * from './Audio';
 export * from './Assistants';
 export * from './Agents';
 export * from './Chat';
+export * from './Commands';
 export * from './Config';
 export * from './Conversations';
 export * from './Nav';

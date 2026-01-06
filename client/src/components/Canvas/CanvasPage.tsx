@@ -5,6 +5,11 @@ import { request } from 'librechat-data-provider';
 import ChatSidebar from './ChatSidebar';
 import NotesEditor from './NotesEditor';
 import PersonalitySection from './PersonalitySection';
+import RecordingSection from './RecordingSection';
+import TranscriptsList from './TranscriptsList';
+import FactsProcessingModal from './FactsProcessingModal';
+import BookmarksModal from './BookmarksModal';
+import InteractionHistory from './InteractionHistory';
 
 const LAST_VISITED_SEGMENT_KEY = 'lastVisitedSegmentId';
 
@@ -102,7 +107,9 @@ const FIELD_LABELS: Record<string, string> = {
 // Get human-friendly label for a field
 const getFieldLabel = (key: string): string => {
   const lowerKey = key.toLowerCase().replace(/[_-]/g, '');
-  return FIELD_LABELS[lowerKey] || key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+  return (
+    FIELD_LABELS[lowerKey] || key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())
+  );
 };
 
 // Check if a field name indicates a date field
@@ -144,10 +151,26 @@ interface CustomerPersonality {
   generatedAt?: Date | string;
 }
 
+interface CustomerTranscript {
+  id: string;
+  filename: string;
+  content: string;
+  createdAt: Date | string;
+}
+
+interface BookmarkedFact {
+  id: string;
+  text: string;
+  transcriptId?: string;
+  createdAt: Date | string;
+}
+
 interface CustomerProfile {
   customerId: string;
   personality?: CustomerPersonality;
   notes?: string;
+  transcripts?: CustomerTranscript[];
+  bookmarkedFacts?: BookmarkedFact[];
   conversationId?: string;
 }
 
@@ -162,6 +185,12 @@ export default function CanvasPage() {
   const [customerError, setCustomerError] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isChatExpanded, setIsChatExpanded] = useState(true);
+
+  // Transcripts and bookmarks state
+  const [transcripts, setTranscripts] = useState<CustomerTranscript[]>([]);
+  const [bookmarks, setBookmarks] = useState<BookmarkedFact[]>([]);
+  const [processingTranscript, setProcessingTranscript] = useState<CustomerTranscript | null>(null);
+  const [showBookmarksModal, setShowBookmarksModal] = useState(false);
 
   // Navigate back to last visited segment
   const handleBack = () => {
@@ -212,13 +241,20 @@ export default function CanvasPage() {
       setIsLoadingProfile(true);
       setProfileError(null);
       try {
-        const data = await request.get(`/api/customer-profile/${customerId}`);
+        const data = (await request.get(
+          `/api/customer-profile/${customerId}`,
+        )) as CustomerProfile | null;
         setProfile(data);
+        // Populate transcripts and bookmarks from profile
+        setTranscripts(data?.transcripts || []);
+        setBookmarks(data?.bookmarkedFacts || []);
       } catch (error: unknown) {
         // Profile might not exist yet, which is ok (404)
         const err = error as { response?: { status?: number }; message?: string };
         if (err.response?.status === 404) {
           setProfile(null);
+          setTranscripts([]);
+          setBookmarks([]);
         } else {
           console.error('Error fetching profile:', error);
           setProfileError(err.message || 'Failed to fetch profile');
@@ -249,6 +285,71 @@ export default function CanvasPage() {
       );
     },
     [customerId],
+  );
+
+  // Handle new transcript added
+  const handleTranscriptAdded = useCallback((transcript: CustomerTranscript) => {
+    setTranscripts((prev) => [...prev, transcript]);
+  }, []);
+
+  // Handle bookmark added
+  const handleBookmarkAdded = useCallback((bookmark: BookmarkedFact) => {
+    setBookmarks((prev) => [...prev, bookmark]);
+  }, []);
+
+  // Handle bookmark removed
+  const handleBookmarkRemoved = useCallback((factId: string) => {
+    setBookmarks((prev) => prev.filter((b) => b.id !== factId));
+  }, []);
+
+  // Handle facts accepted from modal - append to notes
+  const handleFactsProcessed = useCallback(
+    async (acceptedFacts: string[]) => {
+      if (acceptedFacts.length === 0) return;
+
+      // Format facts as HTML list (ReactQuill uses HTML, not markdown)
+      const factsHtml = '<ul>' + acceptedFacts.map((fact) => `<li>${fact}</li>`).join('') + '</ul>';
+
+      // Get current notes and append with HTML formatting
+      const currentNotes = profile?.notes || '';
+      const separator = currentNotes.trim()
+        ? '<p><br></p><p><strong>Fakta dari Percakapan</strong></p>'
+        : '<p><strong>Fakta dari Percakapan</strong></p>';
+      const newNotes = currentNotes + separator + factsHtml;
+
+      try {
+        // Save to backend
+        await request.put(`/api/customer-profile/${customerId}/notes`, { notes: newNotes });
+        // Update local state
+        setProfile((prev) =>
+          prev ? { ...prev, notes: newNotes } : { customerId: customerId || '', notes: newNotes },
+        );
+      } catch (error) {
+        console.error('Error saving facts to notes:', error);
+      }
+    },
+    [customerId, profile?.notes],
+  );
+
+  // Handle accepting a bookmark (add to notes)
+  const handleAcceptBookmark = useCallback(
+    async (text: string) => {
+      // Use HTML list item (ReactQuill uses HTML, not markdown)
+      const factHtml = `<ul><li>${text}</li></ul>`;
+      const currentNotes = profile?.notes || '';
+      const separator = currentNotes.trim() ? '<p><br></p>' : '';
+      const newNotes = currentNotes + separator + factHtml;
+
+      try {
+        await request.put(`/api/customer-profile/${customerId}/notes`, { notes: newNotes });
+        setProfile((prev) =>
+          prev ? { ...prev, notes: newNotes } : { customerId: customerId || '', notes: newNotes },
+        );
+      } catch (error) {
+        console.error('Error adding bookmark to notes:', error);
+      }
+    },
+    [customerId, profile?.notes],
   );
 
   // Format date for display
@@ -298,7 +399,6 @@ export default function CanvasPage() {
               clipRule="evenodd"
             />
           </svg>
-          <span className="text-sm font-medium">Back to Segments</span>
         </button>
         <div className="h-6 w-px bg-border-light" />
         <h1 className="text-xl font-semibold text-text-primary">
@@ -343,7 +443,7 @@ export default function CanvasPage() {
       ) : (
         <div className="flex flex-1 overflow-hidden">
           <div
-            className={`flex-1 overflow-y-auto px-10 py-8 transition-all duration-300 scrollbar-none ${
+            className={`scrollbar-hover flex-1 overflow-y-auto px-10 py-8 transition-all duration-300 ${
               isChatExpanded ? 'w-[65%]' : 'w-full'
             }`}
           >
@@ -361,11 +461,21 @@ export default function CanvasPage() {
                     </span>
                   )}
                 </div>
-                <div className="grid gap-2 md:grid-cols-2 text-sm text-text-secondary">
-                  <div>Email: <span className="text-text-primary">{customer?.email || '-'}</span></div>
-                  <div>Phone: <span className="text-text-primary">{customer?.phone || '-'}</span></div>
-                  <div>Member Since: <span className="text-text-primary">{formatDate(customer?.joinDate)}</span></div>
-                  <div>Birthday: <span className="text-text-primary">{formatDate(customer?.birthday)}</span></div>
+                <div className="grid gap-2 text-sm text-text-secondary md:grid-cols-2">
+                  <div>
+                    Email: <span className="text-text-primary">{customer?.email || '-'}</span>
+                  </div>
+                  <div>
+                    Phone: <span className="text-text-primary">{customer?.phone || '-'}</span>
+                  </div>
+                  <div>
+                    Member Since:{' '}
+                    <span className="text-text-primary">{formatDate(customer?.joinDate)}</span>
+                  </div>
+                  <div>
+                    Birthday:{' '}
+                    <span className="text-text-primary">{formatDate(customer?.birthday)}</span>
+                  </div>
                 </div>
               </div>
 
@@ -376,9 +486,15 @@ export default function CanvasPage() {
                     {Object.entries(customer)
                       .filter(
                         ([key]) =>
-                          !['id', 'name', 'email', 'phone', 'joinDate', 'birthday', 'status'].includes(
-                            key,
-                          ),
+                          ![
+                            'id',
+                            'name',
+                            'email',
+                            'phone',
+                            'joinDate',
+                            'birthday',
+                            'status',
+                          ].includes(key),
                       )
                       .map(([key, value]) => {
                         // Format dates nicely
@@ -387,7 +503,10 @@ export default function CanvasPage() {
                           displayValue = '-';
                         } else if (typeof value === 'object') {
                           displayValue = JSON.stringify(value);
-                        } else if ((isDateField(key) || looksLikeDate(value)) && typeof value === 'string') {
+                        } else if (
+                          (isDateField(key) || looksLikeDate(value)) &&
+                          typeof value === 'string'
+                        ) {
                           displayValue = formatDate(value);
                         } else {
                           displayValue = String(value);
@@ -416,14 +535,52 @@ export default function CanvasPage() {
                 />
               )}
 
+              {/* Recording and Transcripts Section */}
+              <RecordingSection
+                customerId={customerId || ''}
+                onTranscriptAdded={handleTranscriptAdded}
+              />
+
+              {transcripts.length > 0 && (
+                <TranscriptsList
+                  transcripts={transcripts}
+                  onProcessTranscript={(transcript) => setProcessingTranscript(transcript)}
+                />
+              )}
+
               <div className="space-y-3">
-                <h3 className="text-base font-medium text-text-primary">Notes</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-medium text-text-primary">Notes</h3>
+                  {bookmarks.length > 0 && (
+                    <button
+                      onClick={() => setShowBookmarksModal(true)}
+                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-yellow-600 transition-colors hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-900/20"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="size-4"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 2c-1.716 0-3.408.106-5.07.31C3.806 2.45 3 3.414 3 4.517V17.25a.75.75 0 001.075.676L10 15.082l5.925 2.844A.75.75 0 0017 17.25V4.517c0-1.103-.806-2.068-1.93-2.207A41.403 41.403 0 0010 2z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      {bookmarks.length} Bookmarked
+                    </button>
+                  )}
+                </div>
                 <NotesEditor
                   initialValue={profile?.notes || ''}
                   customerId={customerId || ''}
                   onSave={handleNotesSave}
                 />
               </div>
+
+              {/* Interaction History */}
+              <InteractionHistory customerId={customerId || ''} />
             </div>
           </div>
 
@@ -459,6 +616,28 @@ export default function CanvasPage() {
             />
           </div>
         </div>
+      )}
+
+      {/* Facts Processing Modal */}
+      {processingTranscript && (
+        <FactsProcessingModal
+          transcript={processingTranscript}
+          customerId={customerId || ''}
+          onClose={() => setProcessingTranscript(null)}
+          onFactsProcessed={handleFactsProcessed}
+          onBookmarkAdded={handleBookmarkAdded}
+        />
+      )}
+
+      {/* Bookmarks Modal */}
+      {showBookmarksModal && (
+        <BookmarksModal
+          bookmarks={bookmarks}
+          customerId={customerId || ''}
+          onClose={() => setShowBookmarksModal(false)}
+          onBookmarkRemoved={handleBookmarkRemoved}
+          onAcceptBookmark={handleAcceptBookmark}
+        />
       )}
     </div>
   );

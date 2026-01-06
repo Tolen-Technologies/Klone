@@ -12,12 +12,17 @@ import {
 import { getTimestampedValue, setTimestamp } from '~/utils/timestamps';
 import { ephemeralAgentByConvoId } from '~/store';
 
+/** Custom tool key for CRM Segment creation */
+export const CRM_SEGMENT_TOOL_KEY = 'crm_segment';
+const CRM_SEGMENT_STORAGE_KEY = 'lastCrmSegmentToggle_';
+
 interface BadgeRowContextType {
   conversationId?: string | null;
   agentsConfig?: TAgentsEndpoint | null;
   webSearch: ReturnType<typeof useToolToggle>;
   artifacts: ReturnType<typeof useToolToggle>;
   fileSearch: ReturnType<typeof useToolToggle>;
+  crmSegment: ReturnType<typeof useToolToggle>;
   codeInterpreter: ReturnType<typeof useToolToggle>;
   codeApiKeyForm: ReturnType<typeof useCodeApiKeyForm>;
   searchApiKeyForm: ReturnType<typeof useSearchApiKeyForm>;
@@ -186,12 +191,21 @@ export default function BadgeRowProvider({
     isAuthenticated: true,
   });
 
+  /** CRM Segment hook - custom tool for creating customer segments */
+  const crmSegment = useToolToggle({
+    conversationId,
+    toolKey: CRM_SEGMENT_TOOL_KEY,
+    localStorageKey: CRM_SEGMENT_STORAGE_KEY as LocalStorageKeys,
+    isAuthenticated: true,
+  });
+
   const mcpServerManager = useMCPServerManager({ conversationId });
 
   const value: BadgeRowContextType = {
     webSearch,
     artifacts,
     fileSearch,
+    crmSegment,
     agentsConfig,
     conversationId,
     codeApiKeyForm,
